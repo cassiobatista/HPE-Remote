@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(HPE)
+project(hpe_bt)
 find_package(OpenCV REQUIRED)
-add_executable(hpe_remote bluetooth.c hpe_remote_bt.cpp)
-target_link_libraries(HPE bluetooth ${OpenCV_LIBS})
+add_executable(hpe_bt bluetooth.c hpe_remote_bt.cpp)
+target_link_libraries(hpe_bt bluetooth ${OpenCV_LIBS})
