@@ -12,11 +12,11 @@ visually or motor impaired people.
 HPE stands for Head Pose Estimation
 
 ## To Install OpenCV Dependencies:
-```
-sudo apt-get install build-essential -y
-sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev -y
-sudo apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev -y
-
-sudo apt-get install gstreamer1.0-plugins-base libgstreamer1.0-0 libgstreamer1.0-dev libgstreamer-plugins-base1.0-* -y
-sudo apt-get install libavresample-dev libavresample1 -y
+```bash
+sudo apt-get install \
+	build-essential cmake git python-dev python-numpy \
+	libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev \
+	libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev \
+	gstreamer1.0-plugins-base libgstreamer1.0-0 libgstreamer1.0-dev libgstreamer-plugins-base1.0-* \
+	libavresample-dev libavresample1
 ```
