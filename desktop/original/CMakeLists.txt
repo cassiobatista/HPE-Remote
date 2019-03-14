@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
 project(hpe_remote)
 find_package(OpenCV REQUIRED)
-add_executable(hpe_remote hpe_desktop.cpp)
+add_executable(hpe_remote hpe_remote.cpp)
 target_link_libraries(hpe_remote ${OpenCV_LIBS})
