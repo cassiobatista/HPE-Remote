@@ -18,15 +18,15 @@ Check the project page on Hackaday.IO:
 
 On `desktop/original`, you may do the following to compile:      
 ```bash
-user@host $ mkdir build
-user@host $ cd build
-user@host $ cmake ..
-user@host $ make
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
 ```
 
 And to execute:      
 ```bash
-user@host $ ./hpe_remote
+$ ./hpe_remote
 ```
 
 
