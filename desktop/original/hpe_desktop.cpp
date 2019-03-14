@@ -1,5 +1,6 @@
 /*
- * Head Gesture Recognition with OpenCV
+ * Head Pose Estimation with OpenCV
+ * Head Gesture Recognition
  *
  * Copyright 2017
  * LabVIS - Laboratório de Visualização, Interação e Sistemas Inteligentes
@@ -15,7 +16,6 @@
  * Authors: Jan 2017
  * Erick Modesto Campos    - erick.c.modesto@gmail.com
  * Cassio Trindade Batista - cassio.batista.13@gmail.com
- * Nelson C. Sampaio Neto  - dnelsonneto@gmail.com
  */
 
 #include "opencv2/video/tracking.hpp"
@@ -170,12 +170,12 @@ int main(int argc, char** argv)
 			float d_e2e = sqrt(
 						pow((face_triang[0].x-face_triang[1].x),2) +
 						pow((face_triang[0].y-face_triang[1].y),2));
-			
+
 			/* calculate the distance between right eye and nose */
 			float d_re2n = sqrt(
 						pow((face_triang[0].x-face_triang[2].x),2) +
 						pow((face_triang[0].y-face_triang[2].y),2));
-			
+
 			/* calculate the distance between left eye and nose */
 			float d_le2n = sqrt(
 						pow((face_triang[1].x-face_triang[2].x),2) +
@@ -188,6 +188,7 @@ int main(int argc, char** argv)
 			
 			/* Error conditions to opticalflow algorithm to stop */
 			/* ratio: distance of the eyes / distance from right eye to nose */
+			/* calculate the distance between left eye and nose */
 			if(d_e2e/d_re2n < 0.5  || d_e2e/d_re2n > 2.5) {
 				#if DEBUG
 					printf("(%3.8f, %3.8f), %3.8f\n", d_re2n, d_le2n, d_e2e);
@@ -329,7 +330,7 @@ int main(int argc, char** argv)
 			/* current frame now becomes the previous frame */
 			Current_Gray.copyTo(Prev_Gray);
 
-			flip(frame, frame, 1); // optional: orientation problems
+			flip(frame, frame, 1);   // optional: orientation problems
 			imshow("Camera", frame); //show frames from webcam
 
 			/* wait for user to abort */

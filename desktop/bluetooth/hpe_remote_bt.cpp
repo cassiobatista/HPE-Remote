@@ -1,14 +1,15 @@
 /*
  * Head Pose Estimation with OpenCV
+ * Head Gesture Recognition
  *
  * Copyright 2017
- * Grupo FalaBrasil
- * Universidade Federal do Pará
+ * LabVIS - Laboratório de Visualização, Interação e Sistemas Inteligentes
+ * UFPA   - Universidade Federal do Pará
  *
  * References:
  * [1] Euclides N. Arcoverde Neto, Rafael M. Duarte, Rafael M. Barreto, João 
  *     Paulo Magalhães, Carlos C. M. Bastos, Tsang Ing Ren, and George D. C. 
- *     Cavalcanti.  2014.
+ *     Cavalcanti. 2014.
  *     Enhanced real-time head pose estimation system for mobile device.
  *     Integr. Comput.-Aided Eng. 21, 3 (July 2014), 281-293. 
  *
@@ -31,6 +32,7 @@
 #include "bluetooth.c"
 
 #define DEBUG 0
+#define HAAR_PATH "../../haarcascade_frontalface_default.xml"
 
 using namespace cv;
 using namespace std;
@@ -51,31 +53,21 @@ int main(int argc, char** argv)
 	int* pack;
 	int status, sock;
 	
-	Point b;
+	/* frames from webcam */
 	VideoCapture camera(0); // onboard
 
 	/* TODO: Do we need all these variables? */
 	/* TODO: variables do not start with capital letters */
+	/* variables viola-jones */
 	Mat frame, Prev, Prev_Gray, Current, Current_Gray; 
 	CascadeClassifier rosto;
 	vector<Rect> face(2);
 
-	/*
-	 * Criar um arquivo chamado "cv_path.txt" cujo conteúdo seja o caminho para
-	 * o diretório da OpenCV. OBS.: NÃO COMMITAR ESTE ARQUIV TXT!!!
-	 * Ex.: 
-	 * cassio@ppgcc ~/github/coruja_remote/HPE $ cat ../cv_path.txt
-	 * /home/cassio/Downloads/opencv/
-	 *
-	 */
-
-	// http://www.cplusplus.com/reference/string/string/operator+/
-	string cv_path = "../../haarcascade_frontalface_default.xml";
-	ifstream haar(cv_path.c_str());
+	ifstream haar(HAAR_PATH);
 	if(haar.good()) {
-		rosto.load(cv_path);
+		rosto.load(HAAR_PATH);
 	} else {
-		cout << "error: unable to load \"" << cv_path << "\"." << endl;
+		cout << "error: unable to load \"" << HAAR_PATH << "\"." << endl;
 		exit(2);
 	}
 
@@ -83,11 +75,11 @@ int main(int argc, char** argv)
 	int yaw_count, pitch_count, roll_count, noise_count;
 
 	// http://blog.lemoneerlabs.com/3rdParty/Darling_BBB_30fps_DRAFT.html#x1-2000
+	// FIXME are those really necessary for desktop?
 	camera.set(CV_CAP_PROP_FRAME_WIDTH, 320);
 	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
 
-	pack = bt_open_conn();
-	if(pack == NULL)
+	if((pack = bt_open_conn()) == NULL)
 		return -1;
 
 	status = pack[0];
@@ -107,30 +99,32 @@ int main(int argc, char** argv)
 			/* get captured frame from device */
 			camera >> frame;
 
-			/* TODO: What does it do? */
+			/* Viola-Jones face detector */
 			rosto.detectMultiScale(frame, face, 2.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(100, 100));
 	
-			/* TODO: What does it do? */
+			/* draw a green rectangle (square) around the detected face */
 			for(int i=0; i < face.size(); i++){
 				rectangle(frame, face[i], CV_RGB(0, 255, 0), 1);
 				face_dim = frame(face[i]).size().height; // a = face_dimension
 			}
 
-			/* TODO: What does it do? */
+			/* anthropometric initial coordinates of eyes and nose */
 			re_x  = face[0].x + face_dim*0.3;
 			le_x  = face[0].x + face_dim*0.7;
 			eye_y = face[0].y + face_dim*0.38;
 
-			/* TODO: What does it do? */
+			/* define 3 face points in a 2D plan */
 			ponto[0] = cvPoint(re_x, eye_y);//olho direito
 			ponto[1] = cvPoint(le_x, eye_y);//olho esquerdo
 			ponto[2] = cvPoint((re_x+le_x)/2, eye_y+int((le_x-re_x)*0.45));//nariz
 
-			/* TODO: What does it do? */
+			/* draw a red cicle (dtr) around eyes and nose coordinates */
 			for(int i=0; i<3; i++)
 				circle(frame, ponto[i], 2, Scalar(10,10,255), 4, 8, 0);
 
-			/* TODO: What does it do? */
+			/* increase counter if a face is found according to the cascade */
+			/* reset frame counter otherwise
+			 * because we need 10 *consecutive* frames with a face */
 			if((int) face.size() > 0) {// quadros
 				face_count++;
 			} else {
@@ -140,7 +134,8 @@ int main(int argc, char** argv)
 			#if DEBUG
 				printf(".");
 			#endif
-			/* TODO: What does it do? */
+			/* if a face is detected for 10 consecutives, face detection step
+			 * stops and the head pose estimation step starts */
 			if(face_count >= 10) {
 				#if DEBUG
 					printf("\n");
@@ -170,76 +165,95 @@ int main(int argc, char** argv)
 			/* get captured frame from device */
 			camera >> frame;
 
-			/* TODO: What does it do? */
-			frame.copyTo(Current);
-			cvtColor(Current, Current_Gray, CV_BGR2GRAY);
+			/* convert current frame to gray scale */
+			frame.copyTo(Current); // captured frame is the current frame
+			cvtColor(Current, Current_Gray, CV_BGR2GRAY); // jorah mormont
 
-			/* TODO: What does it do? */
+			/* Lucas-Kanade algorithm calculates the optical flow */
+			/* the points are stored in the variable 'current_points_2d' */
 			cv::calcOpticalFlowPyrLK(Prev_Gray, Current_Gray, ponto,
 					saida, STATUS, err, Size(15,15), 1);
 
-			/* TODO: What does it do? */
+			/* Get the three optical flow points 
+			 * right eye = face_triang[0]
+			 * left eye  = face_triang[1]
+			 * nose      = face_triang[2] */
 			for(int i=0; i<3; i++)
 				face_triang[i] = saida[i];
 
+			/* TODO: Geometry of a triangle
+			 * 1) http://stackoverflow.com/questions/19835174/how-to-check-if-3-sides-form-a-triangle-in-c
+			 * 2) http://math.stackexchange.com/questions/516219/finding-out-the-area-of-a-triangle-if-the-coordinates-of-the-three-vertices-are
+			 * 3) Distance from camera to the user's face is inversely 
+			 *    propotional to the distance between the eyes
+			 */
+
+			/* calculate the distance between eyes */
 			float d_e2e = sqrt(
 						pow((face_triang[0].x-face_triang[1].x),2) +
 						pow((face_triang[0].y-face_triang[1].y),2));
 
+			/* calculate the distance between right eye and nose */
 			float d_re2n = sqrt(
 						pow((face_triang[0].x-face_triang[2].x),2) +
 						pow((face_triang[0].y-face_triang[2].y),2));
 
+			/* calculate the distance between left eye and nose */
 			float d_le2n = sqrt(
 						pow((face_triang[1].x-face_triang[2].x),2) +
 						pow((face_triang[1].y-face_triang[2].y),2));
 
+			/* calculate the distance between left eye and nose */
 			if(d_e2e/d_re2n < 0.5  || d_e2e/d_re2n > 3.5) {
 				cout << "too much noise 0." << endl;
 				is_face = false;
 				break;
 			}
+			/* ratio: distance of the eyes / distance from left eye to nose */
 			if(d_e2e/d_le2n < 0.5 || d_e2e/d_le2n > 3.5) {
 				cout << "too much noise 1." << endl;
 				is_face = false;
 				break;
 			}
 
+			/* distance between the eyes */
 			if(d_e2e > 160.0 || d_e2e < 20.0) {
 				cout << "too much noise 2." << endl;
 				is_face = false;
 				break;
 			}
 
+			/* distance from the right eye to nose */
 			if(d_re2n > 140.0 || d_re2n < 10.0) {
 				cout << "too much noise 3." << endl;
 				is_face = false;
 				break;
 			}
+			/* distance from the left eye to nose */
 			if(d_le2n > 140.0 || d_le2n < 10.0) {
 				cout << "too much noise 4." << endl;
 				is_face = false;
 				break;
 			}
-		
-			/* TODO: What does it do? */
+
+			/* draw a cyan circle (dot) around the points calculated by optical flow */
 			for(int i=0; i<3; i++)
 				circle(frame, face_triang[i], 2, Scalar(255,255,5), 4, 8, 0);
-			
-			/* TODO: What does it do? */
+
+			/* head rotation axes */
 			float param = (face_triang[1].y-face_triang[0].y) / (float)(face_triang[1].x-face_triang[0].x);
 			roll  = 180*atan(param)/M_PI;
 			yaw   = ponto[2].x - face_triang[2].x;
 			pitch = face_triang[2].y - ponto[2].y;
-			
-			# if DEBUG
+
+			#if DEBUG
 				printf("%4d,%4d,%4d\t%4d\n", yaw, pitch, roll, noise_count);
 			#endif
 
 			/* debug */
 			printf("%4d,%4d,%4d\t%4d\n", yaw, pitch, roll, noise_count);
 
-			/* Estimate yaw */
+			/* Estimate yaw left and right intervals */
 			if((yaw > -20 && yaw < 0) || (yaw > 0 && yaw < +20)) {
 				yaw_count += yaw;
 			} else {
@@ -249,7 +263,7 @@ int main(int argc, char** argv)
 				}
 			}
 
-			/* Estimate pitch */
+			/* Estimate pitch up and down intervals */
 			if((pitch > -20 && pitch < 0) || (pitch > 0 && pitch < +20)) {
 				pitch_count += pitch;
 			} else {
@@ -259,7 +273,7 @@ int main(int argc, char** argv)
 				}
 			}
 
-			/* Estimate roll */
+			/* Estimate roll left and right intervals */
 			if((roll > -60 && roll < -15) || (roll > +15 && roll < +60)) {
 				roll_count += roll;
 			} else {
@@ -269,14 +283,15 @@ int main(int argc, char** argv)
 				}
 			}
 
-			/* Check for noised signals */
+			/* check for noised signals. Stops if there were more than 2 */
 			if(noise_count > 2) {
 				cout << "too much noise." << endl;
 				is_face = false;
 				break;
 			}
 
-			/* Too much noise between roll and yaw */
+			/* too much noise between roll and yaw */
+			/* to ensure a YAW did happen, make sure a ROLL did NOT occur */
 			if(roll_count > -1 && roll_count < +1) {
 
 				/* Check if it is YAW */
@@ -329,24 +344,26 @@ int main(int argc, char** argv)
 			if(status < 0)
 				printf("vish maria");
 
-			/* TODO: What does it do? */
+			/* store the found points */
 			for(int j=0; j<4; j++)
 				ponto[j] = saida[j];
 
-			/* TODO: What does it do? */
+			/* current frame now becomes the previous frame */
 			Current_Gray.copyTo(Prev_Gray);
 
-			flip(frame,frame,1);
-			imshow("Camera", frame);
+			flip(frame, frame, 1);   // optional: orientation problems
+			imshow("Camera", frame); //show frames from webcam
+
+			/* wait for user to abort */
 			esc = waitKey(30);
-			if(esc == 27)
+			if(esc == 27) // ESC to exit
 				break;
-	
+
 		}//close while isface
 
 		for(int f=0; f<40; f++) {
 			camera >> frame;
-			flip(frame, frame, 1);
+			flip(frame, frame, 1); // left is right, right is left
 
 			putText(frame, action, Point2f(10,300),
 						FONT_HERSHEY_SIMPLEX, 2, cvScalar(255,50,100), 5);
@@ -360,10 +377,9 @@ int main(int argc, char** argv)
 		if(esc == 27)
 			break;
 
-	}//close while true
+	}//close while true (for ;;)
 
 	bt_close_conn(sock);
 
 	return 0;
 }//fim main
-
