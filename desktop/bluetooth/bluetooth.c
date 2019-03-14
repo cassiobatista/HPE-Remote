@@ -23,7 +23,7 @@ int bt_scan()
 
 	/* retrieve the resource number of the first available Bluetooth adapter */
 	dev_id = hci_get_route(NULL); 
-	// int dev_id = hci_devid( "01:23:45:67:89:AB" );
+	//dev_id = hci_devid( "01:23:45:67:89:AB" );
 
 	/* connection to the MCU on the specified local Bluetooth adapter,
 	 * 'and not a connection to a remote Bluetooth device */
