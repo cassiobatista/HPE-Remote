@@ -43,31 +43,29 @@ char esc;
 int main(int argc, char** argv)  
 {  
 	int face_count = 0;
-	vector<Point2f> ponto(3);
-	vector<Point2f> saida(3);
-	Mat err;
-	vector<uchar> STATUS(3);
-	vector<Point2i> face_triang(3); // RE, LE n' N
-	int re_x, le_x, eye_y, face_dim;
+
+	/* variables viola-jones */
+	CascadeClassifier face_model;
+	vector<Rect> face(2);
+
+	/* frames from webcam */
+	VideoCapture camera(0); // 0: onboard; 1: USB
+
+	/* variables OpticalFlow */
+	Mat frame, Prev, err, Prev_Gray, Current, Current_Gray; 
+	vector<Point2f> prev_points_2d(3), current_points_2d(3);
+	vector<uchar> status(3);
+	vector<Point2i> face_triang(3); // RE, LE and N
+	int re_x, le_x, eye_y, face_dim; // for antropometric relations
 
 	int* pack;
-	int status, sock;
-	
-	/* frames from webcam */
-	VideoCapture camera(0); // onboard
-
-	/* TODO: Do we need all these variables? */
-	/* TODO: variables do not start with capital letters */
-	/* variables viola-jones */
-	Mat frame, Prev, Prev_Gray, Current, Current_Gray; 
-	CascadeClassifier rosto;
-	vector<Rect> face(2);
+	int bt_status, bt_sock;
 
 	ifstream haar(HAAR_PATH);
 	if(haar.good()) {
-		rosto.load(HAAR_PATH);
+		face_model.load(HAAR_PATH);
 	} else {
-		cout << "error: unable to load \"" << HAAR_PATH << "\"." << endl;
+		cout << "error: unable to load file'" << HAAR_PATH << "'." << endl;
 		exit(2);
 	}
 
@@ -82,17 +80,19 @@ int main(int argc, char** argv)
 	if((pack = bt_open_conn()) == NULL)
 		return -1;
 
-	status = pack[0];
-	sock = pack[1];
+	bt_status = pack[0];
+	bt_sock = pack[1];
 	free(pack);
 
 	string action;
 
+	/* infinite loop */
 	for(;;) {
 
+		/* reset face counter */
 		face_count = 0;
 
-		/* TODO: What does it do? */
+		/* while a face is not found */
 		printf("Trying to detect a face...\n");
 		while(!is_face) {
 
@@ -100,8 +100,9 @@ int main(int argc, char** argv)
 			camera >> frame;
 
 			/* Viola-Jones face detector */
-			rosto.detectMultiScale(frame, face, 2.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(100, 100));
-	
+			face_model.detectMultiScale(frame, face, 2.1, 3, 
+						0|CV_HAAR_SCALE_IMAGE, Size(100, 100));
+
 			/* draw a green rectangle (square) around the detected face */
 			for(int i=0; i < face.size(); i++){
 				rectangle(frame, face[i], CV_RGB(0, 255, 0), 1);
@@ -109,27 +110,27 @@ int main(int argc, char** argv)
 			}
 
 			/* anthropometric initial coordinates of eyes and nose */
-			re_x  = face[0].x + face_dim*0.3;
-			le_x  = face[0].x + face_dim*0.7;
-			eye_y = face[0].y + face_dim*0.38;
+			re_x  = face[0].x + face_dim*0.3;  // right eye
+			le_x  = face[0].x + face_dim*0.7;  // left eye
+			eye_y = face[0].y + face_dim*0.38; // height of the eyes 
 
 			/* define 3 face points in a 2D plan */
-			ponto[0] = cvPoint(re_x, eye_y);//olho direito
-			ponto[1] = cvPoint(le_x, eye_y);//olho esquerdo
-			ponto[2] = cvPoint((re_x+le_x)/2, eye_y+int((le_x-re_x)*0.45));//nariz
+			prev_points_2d[0] = cvPoint(re_x, eye_y);  // right eye
+			prev_points_2d[1] = cvPoint(le_x, eye_y);  // left eye
+			prev_points_2d[2] = cvPoint((re_x+le_x)/2, // nose
+						eye_y+int((le_x-re_x)*0.45));
 
 			/* draw a red cicle (dtr) around eyes and nose coordinates */
 			for(int i=0; i<3; i++)
-				circle(frame, ponto[i], 2, Scalar(10,10,255), 4, 8, 0);
+				circle(frame, prev_points_2d[i], 2, Scalar(10,10,255), 4, 8, 0);
 
 			/* increase counter if a face is found according to the cascade */
 			/* reset frame counter otherwise
 			 * because we need 10 *consecutive* frames with a face */
-			if((int) face.size() > 0) {// quadros
+			if((int) face.size() > 0) // frame
 				face_count++;
-			} else {
+			else
 				face_count = 0;
-			}
 
 			#if DEBUG
 				printf(".");
@@ -140,28 +141,31 @@ int main(int argc, char** argv)
 				#if DEBUG
 					printf("\n");
 				#endif
-				is_face = true;
-				frame.copyTo(Prev);
-				cvtColor(Prev, Prev_Gray, CV_BGR2GRAY);
+				is_face = true; // ensure breaking Viola-Jones loop
+				frame.copyTo(Prev); // current frame becomes 'previous frame'
+				cvtColor(Prev, Prev_Gray, CV_BGR2GRAY); // jorah mormont
 			}
 
-			/* TODO: What does it do? */
-			flip(frame,frame,1);
-			imshow("Camera", frame);
-			esc = waitKey(30);
-			if(esc == 27)
-				break;
-		}//close while not face
+			flip(frame, frame, 1);   // we've got some problems with orientation
+			imshow("Camera", frame); // show frames
 
+			/* wait for user to abort */
+			esc = waitKey(30);
+			if(esc == 27) // ESC to exit
+				break;
+		}// close while not face 
+
+		/* (re)set pose counters (to zero) */
 		yaw_count = 0;
 		pitch_count = 0;
 		roll_count = 0;
-		noise_count = 0;
+		noise_count = 0; // defines error
 
-		/* TODO: What does it do? */
+		/* while there's a face on the frame */
 		while(is_face) {
 
-			action = "erro";
+			action = "ERROR";
+
 			/* get captured frame from device */
 			camera >> frame;
 
@@ -171,15 +175,16 @@ int main(int argc, char** argv)
 
 			/* Lucas-Kanade algorithm calculates the optical flow */
 			/* the points are stored in the variable 'current_points_2d' */
-			cv::calcOpticalFlowPyrLK(Prev_Gray, Current_Gray, ponto,
-					saida, STATUS, err, Size(15,15), 1);
+			cv::calcOpticalFlowPyrLK(Prev_Gray, Current_Gray,
+						prev_points_2d, current_points_2d, 
+						status, err, Size(15,15), 1);
 
 			/* Get the three optical flow points 
 			 * right eye = face_triang[0]
 			 * left eye  = face_triang[1]
 			 * nose      = face_triang[2] */
 			for(int i=0; i<3; i++)
-				face_triang[i] = saida[i];
+				face_triang[i] = current_points_2d[i];
 
 			/* TODO: Geometry of a triangle
 			 * 1) http://stackoverflow.com/questions/19835174/how-to-check-if-3-sides-form-a-triangle-in-c
@@ -203,6 +208,8 @@ int main(int argc, char** argv)
 						pow((face_triang[1].x-face_triang[2].x),2) +
 						pow((face_triang[1].y-face_triang[2].y),2));
 
+			/* Error conditions to opticalflow algorithm to stop */
+			/* ratio: distance of the eyes / distance from right eye to nose */
 			/* calculate the distance between left eye and nose */
 			if(d_e2e/d_re2n < 0.5  || d_e2e/d_re2n > 3.5) {
 				cout << "too much noise 0." << endl;
@@ -242,9 +249,9 @@ int main(int argc, char** argv)
 
 			/* head rotation axes */
 			float param = (face_triang[1].y-face_triang[0].y) / (float)(face_triang[1].x-face_triang[0].x);
-			roll  = 180*atan(param)/M_PI;
-			yaw   = ponto[2].x - face_triang[2].x;
-			pitch = face_triang[2].y - ponto[2].y;
+			roll  = 180*atan(param)/M_PI;                    // eq. 1
+			yaw   = prev_points_2d[2].x - face_triang[2].x;  // eq. 2
+			pitch = face_triang[2].y - prev_points_2d[2].y;  // eq. 3
 
 			#if DEBUG
 				printf("%4d,%4d,%4d\t%4d\n", yaw, pitch, roll, noise_count);
@@ -293,18 +300,17 @@ int main(int argc, char** argv)
 			/* too much noise between roll and yaw */
 			/* to ensure a YAW did happen, make sure a ROLL did NOT occur */
 			if(roll_count > -1 && roll_count < +1) {
-
 				/* Check if it is YAW */
 				if(yaw_count <= -20) {
-					action = "canal menos";
-					cout << "yaw left\tcanal menos" << endl;
-					status = bt_send(sock, status, "YL");
+					action = "canal anterior";
+					cout << "yaw left\tprevious channel" << endl;
+					bt_status = bt_send(bt_sock, bt_status, "YL");
 					is_face = false;
 					break;
 				} else if(yaw_count >= +20) { 
-					action = "canal mais";
-					cout << "yaw right\tcanal mais" << endl;
-					status = bt_send(sock, status, "YR");
+					action = "proximo canal";
+					cout << "yaw right\tnext channel" << endl;
+					bt_status = bt_send(bt_sock, bt_status, "YR");
 					is_face = false;
 					break;
 				}
@@ -312,41 +318,40 @@ int main(int argc, char** argv)
 				/* Check if it is PITCH */
 				if(pitch_count <= -15) {
 					action = "aumentar volume";
-					cout << "pitch up\tvolume mais" << endl;
-					status = bt_send(sock, status, "PU");
+					cout << "pitch up\tincrease volume" << endl;
+					bt_status = bt_send(bt_sock, bt_status, "PU");
 					is_face = false;
 					break;
 				} else if(pitch_count >= +15) { 
 					action = "diminuir volume";
-					cout << "pitch down\tvolume menos" << endl;
-					status = bt_send(sock, status, "PD");
+					cout << "pitch down\tdecrease volume" << endl;
+					bt_status = bt_send(bt_sock, bt_status, "PD");
 					is_face = false;
 					break;
 				}
 			} else {
-
 				/* Check if it is ROLL */
 				if(roll_count < -120) {
 					action = "ligar televisao";
-					cout << "roll right\tligar televisao" << endl;
-					status = bt_send(sock, status, "RR");
+					cout << "roll right\tturn TV on" << endl;
+					bt_status = bt_send(bt_sock, bt_status, "RR");
 					is_face = false;
 					break;
 				} else if(roll_count > +120) { 
 					action = "desligar televisao";
-					cout << "roll left\tdesligar televisao" << endl;
-					status = bt_send(sock, status, "RL");
+					cout << "roll left\tturn TV off" << endl;
+					bt_status = bt_send(bt_sock, bt_status, "RL");
 					is_face = false;
 					break;
 				}
 			}
 
-			if(status < 0)
+			if(bt_status < 0)
 				printf("vish maria");
 
 			/* store the found points */
 			for(int j=0; j<4; j++)
-				ponto[j] = saida[j];
+				prev_points_2d[j] = current_points_2d[j];
 
 			/* current frame now becomes the previous frame */
 			Current_Gray.copyTo(Prev_Gray);
@@ -379,7 +384,7 @@ int main(int argc, char** argv)
 
 	}//close while true (for ;;)
 
-	bt_close_conn(sock);
+	bt_close_conn(bt_sock);
 
 	return 0;
 }//fim main

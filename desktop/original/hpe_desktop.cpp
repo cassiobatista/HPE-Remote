@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 	vector<Rect> face(2);
 
 	/* frames from webcam */
-	VideoCapture camera(0);
+	VideoCapture camera(0); // 0: onboard; 1: USB
 
 	/* variables OpticalFlow */
 	Mat frame, Prev, err, Prev_Gray, Current, Current_Gray; 
@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 			/* draw a green rectangle (square) around the detected face */
 			for(int i=0; i < face.size(); i++){
 				rectangle(frame, face[i], CV_RGB(0, 255, 0), 1);
-				face_dim = frame(face[i]).size().height; 
+				face_dim = frame(face[i]).size().height; // a = face_dimension
 			}
 
 			/* anthropometric initial coordinates of eyes and nose */
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 			prev_points_2d[0] = cvPoint(re_x, eye_y);  // right eye
 			prev_points_2d[1] = cvPoint(le_x, eye_y);  // left eye
 			prev_points_2d[2] = cvPoint((re_x+le_x)/2, // nose
-								eye_y+int((le_x-re_x)*0.45));
+						eye_y+int((le_x-re_x)*0.45));
 
 			///* draw a red cicle (dtr) around eyes and nose coordinates */
 			//for(int i=0; i<3; i++)
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
 				cvtColor(Prev, Prev_Gray, CV_BGR2GRAY); // jorah mormont
 			}
 
-			flip(frame, frame, 1); // we've got some problems with orientation 
+			flip(frame, frame, 1);   // we've got some problems with orientation
 			imshow("Camera", frame); // show frames
 
 			/* wait for user to abort */
@@ -279,13 +279,11 @@ int main(int argc, char** argv)
 			/* to ensure a YAW did happen, make sure a ROLL did NOT occur */
 			if(roll_count > -1 && roll_count < +1) {
 				if(yaw_count <= -20) {
-					//action = "previous channel";
 					action = "canal anterior";
 					cout << "yaw left\tprevious channel" << endl;
 					is_face = false;
 					break;
 				} else if(yaw_count >= +20) { 
-					//action = "next channel";
 					action = "proximo canal";
 					cout << "yaw right\tnext channel" << endl;
 					is_face = false;
@@ -294,33 +292,29 @@ int main(int argc, char** argv)
 
 				/* Check if it is PITCH */
 				if(pitch_count <= -10) {
-					//action = "increase volume";
 					action = "aumentar volume";
 					cout << "pitch up\tincrease volume" << endl;
 					is_face = false;
 					break;
 				} else if(pitch_count >= +10) { 
 					action = "diminuir volume";
-					//action = "decrease volume";
 					cout << "pitch down\tdecrease volume" << endl;
 					is_face = false;
 					break;
 				}
-			}
-
-			/* Check if it is ROLL */
-			if(roll_count < -150) {
-				//action = "turn TV on";
-				action = "ligar televisao";
-				cout << "roll right\tturn TV on" << endl;
-				is_face = false;
-				break;
-			} else if(roll_count > +150) { 
-				//action = "turn TV off";
-				action = "desligar televisao";
-				cout << "roll left\tturn TV off" << endl;
-				is_face = false;
-				break;
+			} else {
+				/* Check if it is ROLL */
+				if(roll_count < -150) {
+					action = "ligar televisao";
+					cout << "roll right\tturn TV on" << endl;
+					is_face = false;
+					break;
+				} else if(roll_count > +150) { 
+					action = "desligar televisao";
+					cout << "roll left\tturn TV off" << endl;
+					is_face = false;
+					break;
+				}
 			}
 
 			/* store the found points */
