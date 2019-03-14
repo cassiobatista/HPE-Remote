@@ -18,7 +18,7 @@
 #define SAMSUNG_DIMINUIR_VOLUME  0xE0E0D02F
 #define SAMSUNG_ON_OFF           0xE0E040BF
 
-#define DEGUB 0
+#define DEGUB 1
 
 IRsend irsend;
 SoftwareSerial serialBT(HC05_RX_PIN, HC05_TX_PIN); //BLUETOOTH: define pins to Rx and Tx
