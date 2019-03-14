@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 	int status, sock;
 	
 	Point b;
-	VideoCapture camera(1);
+	VideoCapture camera(0); // onboard
 
 	/* TODO: Do we need all these variables? */
 	/* TODO: variables do not start with capital letters */
@@ -69,21 +69,8 @@ int main(int argc, char** argv)
 	 *
 	 */
 
-	// http://www.cplusplus.com/doc/tutorial/files/
-	// http://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
-	string cv_path;
-	ifstream cv_file("../../../cv_path.txt"); 
-	if(cv_file.good() && cv_file.is_open()) {
-		getline(cv_file, cv_path);
-		cv_file.close();
-	} else {
-		cout << "error: unable to locate opencv. ";
-		cout << "File \"cv_path.txt\" does not exist." << endl;
-		exit(1);
-	}
-
 	// http://www.cplusplus.com/reference/string/string/operator+/
-	cv_path += "data/haarcascades/haarcascade_frontalface_default.xml";
+	string cv_path = "../../haarcascade_frontalface_default.xml";
 	ifstream haar(cv_path.c_str());
 	if(haar.good()) {
 		rosto.load(cv_path);
