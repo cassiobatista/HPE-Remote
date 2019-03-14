@@ -14,12 +14,12 @@ HPE stands for Head Pose Estimation
 Check the project page on Hackaday.IO:    
 - https://hackaday.io/project/26830-tv-remote-control-based-on-head-gestures
 
-## Instructions
+## Instructions: Compilation and Usage
 
-On `desktop/original`, you may do the following to compile:      
+On `desktop/original/` dir, you may do the following to compile:      
 ```bash
-$ mkdir build
-$ cd build
+$ mkdir -p desktop/original/build
+$ cd desktop/original/build
 $ cmake ..
 $ make
 ```
@@ -28,7 +28,6 @@ And to execute:
 ```bash
 $ ./hpe_remote
 ```
-
 
 ## To Install OpenCV Dependencies:
 ```bash
