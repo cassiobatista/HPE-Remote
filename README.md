@@ -9,6 +9,8 @@ special needs. Coruja Remote accepts both voice commands and head poses as input
 commands, which turns itself a good -- and maybe the only one -- solution for
 visually or motor impaired people.
 
+![TV control via head gestures](./move.gif)
+
 HPE stands for Head Pose Estimation
 
 Check the project page on Hackaday.IO:    
