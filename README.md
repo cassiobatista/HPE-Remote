@@ -42,6 +42,13 @@ sudo apt-get install \
 ## Citation
 If you ever use this code please cite the paper as the following:
 
+> Cassio T. Batista, Erick M. Campos, and Nelson C. Sampaio Neto. 2017. A
+> Proposal of a Universal Remote Control System Based on Head Movements. In
+> Proceedings of the XVI Brazilian Symposium on Human Factors in Computing
+> Systems (IHC 2017). ACM, New York, NY, USA, Article 2, 10 pages. DOI:
+> https://doi.org/10.1145/3160504.3160516
+
+
 ```bibtex
 @inproceedings{Batista17,
     author    = {Batista, Cassio T. and Campos, Erick M. and Neto, Nelson C. Sampaio},
