@@ -1,7 +1,7 @@
 Coruja Remote
 =============
 
-Coruja Remote is a universal, multimodal remote control developed by FalaBrasil
+Cassio Trindade Batista Coruja Remote is a universal, multimodal remote control developed by FalaBrasil
 Group at Federal University of Pará (UFPA), Brazil. Conventional, universal
 remote control devices or apps on the smartphone, force the use of hands by the
 user, which can be cumbersome or even impossible, specially for people with
