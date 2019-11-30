@@ -12,7 +12,7 @@ visually or motor impaired people.
 
 HPE stands for Head Pose Estimation
 
-<!--> Check the project page on Hackaday.IO:    - https://hackaday.io/project/26830-tv-remote-control-based-on-head-gestures <-->
+<!-- Check the project page on Hackaday.IO:    - https://hackaday.io/project/26830-tv-remote-control-based-on-head-gestures -->
 
 ## Instructions: Compilation and Usage
 
